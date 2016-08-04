@@ -1,0 +1,31 @@
+// generateSpikeTemplate()
+// makeNeuron(generateSpikeTemplate(), 10)
+
+// observedWaveform(makeNeuron(generateSpikeTemplate(), 10))
+
+// var trueNeurons = map(function(d) {makeNeuron(generateSpikeTemplate(), d)},
+// 					  [3, 5, 7])
+
+// sampleObservation(trueNeurons)
+// generateSpikeTemplate()
+// MSE(sampleObservation(trueNeurons),generateSpikeTemplate())
+
+
+// neuron1distance ~ prior()
+// neuron2distance ~ prior()
+
+// Enumerate(function() {
+// 	var fired?1 = flip(..) ? 1 : 0;
+// 	...
+
+// 	pureSampledTotalActivity = fired?1 * wf1 + ...;//
+
+// 	var total = pure + N(m,s);
+// 	factor(Gaussian({mu: pure + m, s}).score(total))
+// 	condition(total == empiricalTotal)
+
+
+// 	//condition(sampledTotalActivity == observedTotalActivity)
+// })
+
+// return [n1_fired?, ...]

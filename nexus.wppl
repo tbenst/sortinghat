@@ -1,0 +1,7 @@
+generateSpikeTemplate()
+
+// new Neuron(5,10)
+
+
+var animal1 = Object.create(Animal);
+animal1.displayType(); // Output:Invertebrates

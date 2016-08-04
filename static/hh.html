@@ -1,0 +1,173 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/bootstrap.min.css" rel="stylesheet" media="screen">
+    <script type="text/javascript" src="/jquery.min.js"></script>
+    <script type="text/javascript" src="/bootstrap.min.js"></script>
+  </head>
+  <body style="padding:5px;">
+    <div class="container bs-docs-container">
+      <div id="dbgOutput">
+      </div>
+      <h1>Hodgkin-Huxley Simulation with Javascript</h1>
+      <div class="container">
+			<div id="hodgkinHuxley" style="width:640px;height:480px;float:left;" class="demo-placeholder"></div>
+      <div style="float:left;">
+        <table>
+        <tr><td>C (muF/cm^2):</td><td><input type="number" name="C" min="0.001" max="100" value="1"></td></tr>
+        <tr><td>GKMax (mS/cm^2):</td><td><input type="number" name="GKMax" min="0" max="500" value="36"></td></tr>
+        <tr><td>GNaMax (mS/cm^2):</td><td><input type="number" name="GNaMax" min="0" max="500" value="120"></td></tr>
+        <tr><td>Gm (mS/cm^2):</td><td><input type="number" name="Gm" min="0" max="10" value="0.3"></td></tr>
+        <tr><td>EK (mV):</td><td><input type="number" name="EK" min="-200" max="200" value="-12"></td></tr>
+        <tr><td>ENa (mV):</td><td><input type="number" name="ENa" min="-200" max="200" value="115"></td></tr>
+        <tr><td>VRest (mV):</td><td><input type="number" name="VRest" min="-200" max="200" value="10.613"></td></tr>
+        <tr><td>V(0) (mV):</td><td><input type="number" name="V0" min="-200" max="200" value="0"></td></tr>
+        <tr><td>tStop (ms):</td><td><input type="number" name="tStop" min="0" max="2000" value="5"></td></tr>
+        <tr><td>tInjStart (ms):</td><td><input type="number" name="tInjStart" min="0" max="2000" value="0"></td></tr>
+        <tr><td>tInjStop (ms):</td><td><input type="number" name="tInjStop" min="0" max="2000" value="1"></td></tr>
+        <tr><td>IDC (nA/cm^2):</td><td><input type="number" name="IDC" min="0" max="200" value="35"></td></tr>
+        <tr><td>IRand (nA/cm^2):</td><td><input type="number" name="IRand" min="0" max="200" value="0"></td></tr>
+        <tr><td>Itau (ms):</td><td><input type="number" name="Itau" min="0" max="10" value="1"></td></tr>
+        </table>
+        <button name="startStopButton">Start</button>
+        <p id="time">t=0s</p>
+      </div>
+		</div>
+		<script type="text/javascript" src="/jquery.flot.js"></script>
+    
+    <script type="text/javascript">
+    HH = function(C, GKMax, GNaMax, Gm, EK, ENa, VRest, V0) {
+      this.dt = 0.025; //ms
+      this.C = C; //in muF/cm^2
+      this.GKMax = GKMax;
+      this.GNaMax = GNaMax;
+      this.EK = EK; //mV
+      this.ENa = ENa;
+      this.Gm = Gm;
+      this.VRest = VRest;
+      this.V = V0;
+      this.n = 0.32;
+      this.m = 0.05;
+      this.h = 0.60;
+      this.INa = 0;
+      this.IK = 0;
+      this.Im = 0;
+      this.Iinj = 0;
+           
+      function alphaN(V) {
+        if (V===10) return alphaN(V+0.001); // 0/0 -> NaN
+        return (10-V) / (100*(Math.exp((10-V)/10)-1));
+      };
+      function betaN(V) {
+        return 0.125 * Math.exp(-V/80);
+      };
+      
+      function alphaM(V) {
+        if (V===25) return alphaM(V+0.001);  // 0/0 -> NaN
+        return (25-V) / (10 * (Math.exp((25-V)/10)-1));
+      };
+      function betaM(V) {
+        return 4 * Math.exp(-V/18)
+      };
+      
+      function alphaH(V) {
+        return 0.07*Math.exp(-V/20);
+      };
+      function betaH(V) {
+        return 1 / (Math.exp((30-V)/10)+1);
+      };
+      
+      this.step = function () {
+        var aN = alphaN(this.V);
+        var bN = betaN(this.V);
+        var aM = alphaM(this.V);
+        var bM = betaM(this.V);
+        var aH = alphaH(this.V);
+        var bH = betaH(this.V);
+        
+        var tauN = 1 / (aN + bN);
+        var tauM = 1 / (aM + bM);
+        var tauH = 1 / (aH + bH);
+        var nInf = aN * tauN;
+        var mInf = aM * tauM;
+        var hInf = aH * tauH;
+        
+        this.n += this.dt / tauN * (nInf - this.n);
+        this.m += this.dt / tauM * (mInf - this.m);
+        this.h += this.dt / tauH * (hInf - this.h);
+        this.INa = this.GNaMax * this.m * this.m * this.m * this.h * (this.ENa - this.V);
+        this.IK = this.GKMax * this.n * this.n * this.n * this.n * (this.EK - this.V);
+        this.Im = this.Gm * (this.VRest - this.V);
+        
+        this.V += this.dt / this.C * (this.INa + this.IK + this.Im + this.Iinj);
+      };
+    };
+    </script>
+		<script type="text/javascript">
+		$(function() {
+      var plot = $.plot("#hodgkinHuxley", [ [] ],
+                          {xaxis: {min:0, max: 200},
+                           yaxis: {min:-50, max:150},
+                           colors: ['#000000', '#FF0000']});
+      var simulationRunning = false;
+      $("[name=startStopButton]").click(function() {
+        /* Parameters */
+        var C = parseFloat($("input[name=C]").val());
+        var GKMax = parseFloat($("input[name=GKMax]").val());
+        var GNaMax = parseFloat($("input[name=GNaMax]").val());
+        var Gm = parseFloat($("input[name=Gm]").val());
+        var EK = parseFloat($("input[name=EK]").val());
+        var ENa = parseFloat($("input[name=ENa]").val());
+        var VRest = parseFloat($("input[name=VRest]").val());
+        var V0 = parseFloat($("input[name=V0]").val());
+        var tStop = parseFloat($("input[name=tStop]").val());
+        var tInjStart = parseFloat($("input[name=tInjStart]").val());
+        var tInjStop = parseFloat($("input[name=tInjStop]").val());
+        var IDC = parseFloat($("input[name=IDC]").val());
+        var IRand = parseFloat($("input[name=IRand]").val());
+        var Itau = parseFloat($("input[name=Itau]").val());
+        
+        var plot = $.plot("#hodgkinHuxley", [ { data:[[]], label:"membrane voltage (mV)"},
+                                              { data:[[]], label:"injected current (nA/cm^2)"} ],
+                          {xaxis: {min:0, max: tStop},
+                           yaxis: {min:-50, max:150},
+                           colors: ['#000000', '#FF0000']});        
+
+        var hodgkinHuxley = new HH(C, GKMax, GNaMax, Gm, EK, ENa, VRest, V0);
+        
+        var Vs = new Array(Math.floor(tStop/hodgkinHuxley.dt));
+        var Iinj = new Array(Math.floor(tStop/hodgkinHuxley.dt));
+        // sample rate of simulation data to generate plotting data
+        var plotSampleRate = Math.ceil(tStop/2000/hodgkinHuxley.dt);
+        var i=0;
+        for (var t=0; t<tStop; t+=hodgkinHuxley.dt) {
+          if (t>tInjStart && t<tInjStop) {
+            rawInj = IDC + IRand * 2 * (Math.random()-0.5);
+          } else {
+            rawInj = 0;
+          }
+          hodgkinHuxley.Iinj += hodgkinHuxley.dt/Itau * (rawInj - hodgkinHuxley.Iinj);
+          hodgkinHuxley.step();
+          if (i == plotSampleRate) {
+            Vs.push([t, hodgkinHuxley.V]);
+            Iinj.push([t, hodgkinHuxley.Iinj]);
+            i=0;
+          }
+          i++;
+        }
+        if (isNaN(Vs[Vs.length-1][1])) {
+          $('#errorDiv').html('<b>simulation produced NaN, probably numerical instability or bug</b>');
+        } else {
+          $('#errorDiv').html();
+        }
+        plot.setData([Vs, Iinj]);
+        plot.draw();
+      });
+    });
+		</script>
+    <div id="errorDiv" style="color:#FF0000;"></div>
+  </body>
+</html>
+  
