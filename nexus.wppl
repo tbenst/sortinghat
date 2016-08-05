@@ -1,38 +1,39 @@
-var model = function(priorNeurons, observation, priorSigma) {
-	var sampleNeurons = map(function(neuron) {
-			var d = gaussian({mu: neuron.distance, sigma: priorSigma})
+var model = function(neurons, prior, observation) {
+	var samplePrior = sample(prior)
+	var sampleNeurons = map2(function(neuron,d) {
 			// console.log(d)
 			return _.extend(neuron,
-				{distance: ((d < 1) ? 1 : d)})
+				{distance: ((d < 1) ? 1 : d+gaussian(0,1))})
 		},
-		priorNeurons)
+		neurons, samplePrior)
 
 
-	var samplePrior = pureSampleWindow(sampleNeurons)
-	var error = MSE(samplePrior, observation)
+	var generatedObservation = pureSampleWindow(sampleNeurons)
+	var error = MSE(generatedObservation, observation)
 	factor(-10*error)
 	return _.pluck(sampleNeurons, 'distance')
+	// return _.pluck(sampleNeurons, 'distance')
 }
 
-var processObservations = function(observations, priorNeurons, posteriors, priorSigma) {
-	console.log(" called processObservations")
+var processObservations = function(observations, neurons, prior) {
+	console.log(" call to process observations")
 	if (_.first(observations) !== undefined) {
-		var post = Infer({method: 'MCMC', samples: 500, onlyMAP: true},
+		var posterior = Infer({method: 'MCMC', samples: 50},
 			function() {
-				return model(priorNeurons, observations[0], priorSigma)
+				return model(neurons, prior, observations[0])
 			})
-		var posteriorEstimate = sample(post)
-		console.log('posteriorEstimate', posteriorEstimate)
-		var posteriorNeurons = map2(function(neuron,p) {
-				return _.extend(neuron,{
-					distance: p
-				})
-			},
-			priorNeurons, posteriorEstimate)
-		processObservations(_.rest(observations), posteriorNeurons,
-			posteriors.concat([_.pluck(posteriorNeurons, 'distance')]), priorSigma)
+
+		// var posteriorEstimate = sample(post)
+		// var posteriorNeurons = map2(function(neuron,p) {
+			// 	return _.extend(neuron,{
+			// 		distance: p
+			// 	})
+			// },
+			// priorNeurons, posteriorEstimate)
+		// var post = map(function(x) {return {distance: x}},posterior)
+		processObservations(_.rest(observations), neurons, posterior)
 	} else {
-		return posteriors
+		return prior
 	}
 }
 
@@ -42,16 +43,25 @@ var trueNeurons = map(function(num) {
 					[1.5, 2, 3.5])
 
 var observations = map(function(x) {return sampleObservation(trueNeurons)},
-	_.range(1000))
+	_.range(50))
 
-var priorNeurons = map(function(num) {
-						return makeNeuron({firingRate: 10,
-							distance: uniform({a:1,b:5})})
+var neurons = map(function(num) {
+						return makeNeuron({distance: null})
 					},
 					_.range(3))
 
-var candidateDistances = processObservations(observations, priorNeurons, [], .1)
-console.log("candidateDistances", candidateDistances)
+var priorDistribution = function(num) {
+	Infer({method: "forward", samples: 1000}, function() {
+		return map(function(n) {return uniform({a:1, b:2})},_.range(num))
+	})
+}
+
+var posteriors = processObservations(observations, neurons,
+	priorDistribution(neurons.length))
+console.log(posteriors)
+// viz.auto(posteriors)
+
+// console.log("candidateDistances", candidateDistances)
 // console.log("processObservations",processObservations(observations, priorNeurons, [], 1))
 
 // var post = Infer({method: 'MCMC', samples: 5000, onlyMAP: true},
