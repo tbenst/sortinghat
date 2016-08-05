@@ -1,31 +1,24 @@
-// generateSpikeTemplate()
-// makeNeuron(generateSpikeTemplate(), 10)
+console.log("generatesSpikeTemplate", generateSpikeTemplate())
+console.log("makeNeuron", console.log(makeNeuron({firingRate: 10})))
 
-// observedWaveform(makeNeuron(generateSpikeTemplate(), 10))
+console.log("observedWaveform")
+console.log(waveformAtElectrode(makeNeuron({firingRate: 10})))
 
-// var trueNeurons = map(function(d) {makeNeuron(generateSpikeTemplate(), d)},
-// 					  [3, 5, 7])
+var trueNeurons = map(function(num) {
+						return makeNeuron({firingRate: 10, distance: num})
+					},
+					[3, 5, 7])
+console.log("trueNeurons")
+console.log(trueNeurons)
 
-// sampleObservation(trueNeurons)
-// generateSpikeTemplate()
-// MSE(sampleObservation(trueNeurons),generateSpikeTemplate())
+console.log("sampleObservation", sampleObservation(trueNeurons))
 
-
-// neuron1distance ~ prior()
-// neuron2distance ~ prior()
-
-// Enumerate(function() {
-// 	var fired?1 = flip(..) ? 1 : 0;
-// 	...
-
-// 	pureSampledTotalActivity = fired?1 * wf1 + ...;//
-
-// 	var total = pure + N(m,s);
-// 	factor(Gaussian({mu: pure + m, s}).score(total))
-// 	condition(total == empiricalTotal)
+// console.log('T.sub')
+var a = generateSpikeTemplate()
+var b = sampleObservation(trueNeurons)
+console.log("to sub", a,b)
+console.log("now subtracting", T.add(a,b))
+console.log("MSE", MSE(sampleObservation(trueNeurons),generateSpikeTemplate()))
 
 
-// 	//condition(sampledTotalActivity == observedTotalActivity)
-// })
-
-// return [n1_fired?, ...]
+"done"

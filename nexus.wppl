@@ -1,7 +1,62 @@
-generateSpikeTemplate()
+var model = function(priorNeurons, observation, priorSigma) {
+	var sampleNeurons = map(function(neuron) {
+			var d = gaussian({mu: neuron.distance, sigma: priorSigma})
+			// console.log(d)
+			return _.extend(neuron,
+				{distance: ((d < 1) ? 1 : d)})
+		},
+		priorNeurons)
 
-// new Neuron(5,10)
 
+	var samplePrior = pureSampleWindow(sampleNeurons)
+	var error = MSE(samplePrior, observation)
+	factor(-10*error)
+	return _.pluck(sampleNeurons, 'distance')
+}
 
-var animal1 = Object.create(Animal);
-animal1.displayType(); // Output:Invertebrates
+var processObservations = function(observations, priorNeurons, posteriors, priorSigma) {
+	console.log(" called processObservations")
+	if (_.first(observations) !== undefined) {
+		var post = Infer({method: 'MCMC', samples: 500, onlyMAP: true},
+			function() {
+				return model(priorNeurons, observations[0], priorSigma)
+			})
+		var posteriorEstimate = sample(post)
+		console.log('posteriorEstimate', posteriorEstimate)
+		var posteriorNeurons = map2(function(neuron,p) {
+				return _.extend(neuron,{
+					distance: p
+				})
+			},
+			priorNeurons, posteriorEstimate)
+		processObservations(_.rest(observations), posteriorNeurons,
+			posteriors.concat([_.pluck(posteriorNeurons, 'distance')]), priorSigma)
+	} else {
+		return posteriors
+	}
+}
+
+var trueNeurons = map(function(num) {
+						return makeNeuron({firingRate: 10, distance: num})
+					},
+					[1.5, 2, 3.5])
+
+var observations = map(function(x) {return sampleObservation(trueNeurons)},
+	_.range(1000))
+
+var priorNeurons = map(function(num) {
+						return makeNeuron({firingRate: 10,
+							distance: uniform({a:1,b:5})})
+					},
+					_.range(3))
+
+var candidateDistances = processObservations(observations, priorNeurons, [], .1)
+console.log("candidateDistances", candidateDistances)
+// console.log("processObservations",processObservations(observations, priorNeurons, [], 1))
+
+// var post = Infer({method: 'MCMC', samples: 5000, onlyMAP: true},
+// 	function() {
+// 		return model(3, observations[0])
+// 	})
+
+"done"
